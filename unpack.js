@@ -71,7 +71,8 @@ export class Unpackr {
 			})
 		}
 		if (!source.buffer && source.constructor === ArrayBuffer)
-			source = typeof Buffer !== 'undefined' ? Buffer.from(source) : new Uint8Array(source);
+			source = new Uint8Array(source); // msgpack-lite compatibility (uint8array)
+			// source = typeof Buffer !== 'undefined' ? Buffer.from(source) : new Uint8Array(source);
 		if (typeof options === 'object') {
 			srcEnd = options.end || source.length
 			position = options.start || 0
@@ -880,10 +881,12 @@ function readOnlyJSString() {
 
 
 function readBin(length) {
-	return currentUnpackr.copyBuffers ?
+	const arrayBuffer = currentUnpackr.copyBuffers ?
 		// specifically use the copying slice (not the node one)
 		Uint8Array.prototype.slice.call(src, position, position += length) :
 		src.subarray(position, position += length)
+
+	return arrayBuffer.buffer; // msgpack-lite compatibility (bin_arraybuffer)
 }
 function readExt(length) {
 	let type = src[position++]
@@ -898,8 +901,28 @@ function readExt(length) {
 			}
 		})
 	}
-	else
-		throw new Error('Unknown extension type ' + type)
+	else {
+		/**
+		 * msgpack-lite compatiblity
+		 * return a Bufferish buffer to allow custom handling in older scripts to work
+		 */
+		try {
+			const buffer = new Uint8Array(length);
+			
+			for (let i = 0; i < length; i++)
+				buffer[i] = src[position + i];
+
+			position += length;
+
+			return {
+				buffer: Bufferish.from(buffer),
+				type
+			}
+		} catch(e) {
+			throw new Error(`Error occured decoding buffer of type ${type}: ${e}`)
+		}
+	}
+		// throw new Error('Unknown extension type ' + type)
 }
 
 var keyCache = new Array(4096)

@@ -4,7 +4,8 @@ try {
 	textEncoder = new TextEncoder()
 } catch (error) {}
 let extensions, extensionClasses
-const hasNodeBuffer = typeof Buffer !== 'undefined'
+const hasNodeBuffer = false; // msgpack-lite compatibility (uint8array)
+// const hasNodeBuffer = typeof Buffer !== 'undefined'
 const ByteArrayAllocate = hasNodeBuffer ?
 	function(length) { return Buffer.allocUnsafeSlow(length) } : Uint8Array
 const ByteArray = hasNodeBuffer ? Buffer : Uint8Array
